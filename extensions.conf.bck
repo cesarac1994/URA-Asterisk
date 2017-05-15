@@ -1,0 +1,107 @@
+;EXTENSIONS.CONF
+[general]
+autofallthrough = no
+language=pt_BR
+
+;=======MACROS==========
+[macro-desligar]
+exten => s,1,playback(pt_BR/vm-goodbye)
+exten => s,n,hangup()
+
+[macro-discar]
+;É REALIZADA A CHAMADA, ESPERANDO UM TEMPO DE RESPOSTA
+exten => s, 1, Dial(${ARG1}/${ARG2},${ARG3}) ;ARG1=PROTOCOLO DE COMUNICAÇÃO  ARG2=EXTENSAO  ARG3=TEMPO DE ESPERA
+exten => s,n,Goto(call-${DIALSTATUS},1)
+exten => call-NOANSWER,1,Playback(test/nao-atende)
+exten => call-NOANSWER,n,HangUP
+exten => call-BUSY,1,Playback(pt_BR/all-circuits-busy-now)
+exten => call-BUSY,n,HangUP
+
+[macro-opcao-invalida]
+;USUARIO TEM NO MAXIMO 3 TENTATIVAS DE ACERTO DA OPÇÃO, SE NÃO SERÁ REDIRECIONADO PARA A OPÇÃO DESLIGAR DO CONTEXTO
+exten=>s,1,Gotoif($[${ARG1} = -3]?${ARG2},${ARG4},1:) ;ARG1=VARIAVEL  ARG2=CONTEXTO LOCAL ARG4=OPÇÃO DESLIGAR 
+exten=>s,n,PlayBack(pt_BR/pm-invalid-option)
+exten=>s,n,Goto(${ARG2},s,${ARG3}) ;cria loop, ARG3=OPÇÃO DE VOLTA
+
+
+;=======URA===========
+[entrada] 
+exten=>s,1,Answer() 
+exten=>s,n,Background(menu) 
+exten=>s,n,Wait() 
+exten=>s,n,Goto(s,2) ;cria loop 
+exten=>0,1,Macro(desligar) 
+exten=>1,1,playback(pt_BR/1)
+exten=>1,n,Goto(gravacao,s,2)
+exten=>1,n,Macro(desligar)
+exten=>2,1,playback(pt_BR/2) 
+exten=>2,n,playback(pt_BR/hello-world) 
+exten=>2,n,Background(pt_BR/finalizacao-sub-menu) 
+exten=>3,1,playback(pt_BR/3) 
+exten=>3,n,playback(pt_BR/pbx-transfer)
+exten=>3,n,Queue(teste)
+exten=>3,n,Hangup()
+exten=>7,1,playback(pt_BR/7)
+exten=>7,n,Goto(s,2)
+exten=>i,1,Set(TENTATIVAS=$[${TENTATIVAS} - 1])
+exten=>i,n,Macro(opcao-invalida,${TENTATIVAS},entrada,2,0)
+
+
+;======RAMAIS============
+[interno]
+;RAMAL URA
+exten=>8000,1,Goto(entrada,s,1) 
+
+;RAMAIS QUAISQUER
+exten => 2017,1,Macro(discar,SIP,${EXTEN},20,t)
+exten=>2017,2,Macro(desligar)
+
+exten=>2020,1,Dial(180/2020,D(w*w1w3))
+exten=>2020,n,Hangup()
+
+exten=>2018,1,Macro(discar,SIP,${EXTEN},20,t)
+exten=>2018,n,Macro(desligar)
+
+
+;exten => _200[12],1,Answer()
+
+
+exten => 2001,1,Agentlogin(${EXTEN}) ;Faz login para atender a fila de atendimento
+exten => 2001,1,Hangup
+exten => 2002,1,Agentlogin(${EXTEN}) ;Faz login para atender a fila de atendimento
+exten => 2002,1,Hangup
+exten => 2003,1,Agentlogin(${EXTEN}) ;Faz login para atender a fila de atendimento
+exten => 2003,1,Hangup
+exten => 2004,1,Agentlogin(${EXTEN}) ;Faz login para atender a fila de atendimento
+exten => 2004,1,Hangup
+
+;RAMAL GRAVAÇÃO
+exten=>2000,1,Goto(gravacao,s,1)
+exten=>2000,n,Macro(desligar)
+
+[gravacao]
+;RAMAL GRAVAR AUDIO E OUVI-LO (ao apertar #)
+exten=>s,1,Answer()
+exten=>s,n,Wait(1)
+exten=>s,n,playback(pt_BR/vm-rec-temp)
+exten=>s,n,Record(gravacoes/test%d:gsm) ;grava na pasta gravacoes, extensão gsm
+exten=>s,n,Wait(1)
+exten=>s,n,Background(pt_BR/vm-review) ;pega o arquivo que foi gravado
+;exten=>s,n,Background(pt_BR/vm-savemessage) 
+exten=>1,1,playback(pt_BR/1)
+exten=>1,n,Macro(desligar)
+exten=>2,1,playback(pt_BR/2)
+exten=>2,n,Playback(${RECORDED_FILE}) ;pega o arquivo que foi gravado
+exten=>2,n,Goto(s,6)
+exten=>3,1,playback(pt_BR/3)
+exten=>3,n,Goto(s,2)
+exten=>i,1,Set(VARTENTATIVAS=$[${VARTENTATIVAS} - 1])
+exten=>i,n,Macro(opcao-invalida,${VARTENTATIVAS},gravacao,6,9)
+
+
+
+
+
+
+
+
